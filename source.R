@@ -19,7 +19,8 @@ webshot::install_phantomjs()
 
 # source files
 source("cloud.R")
-source("app.R")
+source("ui.R")
+source("server.R")
 
 # Run app
 shinyApp(ui = ui, server = server)
