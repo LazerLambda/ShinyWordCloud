@@ -8,10 +8,14 @@ library(shiny)
 library(stopwords)
 library(stringr)
 library(tokenizers)
+library(webshot)
 library(wordcloud2)
 
 # set directory
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# install phantomjs
+webshot::install_phantomjs()
 
 # source files
 source("cloud.R")

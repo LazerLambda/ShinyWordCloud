@@ -9,6 +9,7 @@ WordCloud <- R6Class(
     },
     
     frequent_terms = NA,
+    wordcloud = NA,
     
     process_whatsapp = function(
       file_name,
@@ -56,13 +57,17 @@ WordCloud <- R6Class(
     },
     
     create_wordcloud = function() {
-      
-      wordcloud2(
+      set.seed(2)
+      self$wordcloud <- wordcloud2(
         data = self$frequent_terms,
         shape = "cardiod",
         shuffle = F
       )
+      return(self$wordcloud)
+    },
     
+    return_wordcloud = function() {
+      return(self$wordcloud)
     }
   )
 )

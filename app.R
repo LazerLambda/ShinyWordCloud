@@ -33,7 +33,8 @@ ui <- fluidPage(
         min = 0,
         max = 200,
         step = 1,
-        width = NULL)
+        width = NULL),
+      downloadButton("downloadData", "Download")
     ),
     
     mainPanel(
@@ -45,9 +46,15 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
+
+  # create wordcloud
   word_cloud <- WordCloud$new()
   output$wordcloud <- renderWordcloud2(
     {
+      print(input$file$datapath)
+      if (is.null(input$file$datapath)){
+        return(NULL)
+      }
       if (input$whatsapp_option) {
         word_cloud$process_whatsapp(
           input$file$datapath,
@@ -56,6 +63,24 @@ server <- function(input, output, session) {
       }
       
       word_cloud$create_wordcloud()
+    }
+  )
+
+  # Download image
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste("wordcloud", ".png", sep = "")
+    },
+    content = function(file) {
+      htmlwidgets::saveWidget(
+        word_cloud$return_wordcloud(),
+        "tmp.html",
+        selfcontained = F
+      )
+      webshot("tmp.html", file,
+              delay = 5,
+              vwidth = 7 * input$top_words,
+              vheight = 7 * input$top_words)
     }
   )
 }
