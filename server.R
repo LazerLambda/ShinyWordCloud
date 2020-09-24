@@ -3,8 +3,7 @@ server <- function(input, output, session) {
   # create wordcloud
   word_cloud <- WordCloud$new()
   output$wordcloud <- renderWordcloud2(
-    {
-      print(input$file$datapath)
+    {´
       if (is.null(input$file$datapath)){
         return(NULL)
       }
