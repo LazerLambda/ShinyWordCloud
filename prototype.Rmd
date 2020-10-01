@@ -39,6 +39,20 @@ data[, token := tokenize_words(text)]
 
 ```
 
+# Language and stopwords
+```{r}
+library(cld3)
+library(stopwords)
+
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+language <- getmode(detect_language(data[, text]))
+stopwords <- stopwords(language = language)
+```
+
 # POS-Tags
 ```{r}
 library(openNLP)
@@ -59,18 +73,32 @@ pos_tagger <- function(text) {
 data[, c("pos") := list(list(pos_tagger(.(text)))), by =.(index)]
 ```
 
-# Language and stopwords
+# Get specifically tagged words only
 ```{r}
-library(cld3)
-library(stopwords)
+filter_pos <- function(POS_table, POS_tags, text) {
+    if(is.na(POS_table[[1]])) {
+    return(NA)
+  }
+  POS_table <- POS_table[[1]][[1]]
 
-getmode <- function(v) {
-  uniqv <- unique(v)
-  uniqv[which.max(tabulate(match(v, uniqv)))]
+  log_vec <- unlist(lapply(POS_table$features, function(x) {
+    if (is.null(x$POS)) {
+      return(F)
+    } else {
+      if (x$POS %in% POS_tags) {
+        return(T)
+      } else {
+        return(F)
+      }
+    }
+  }))
+  POS_table <- POS_table[log_vec]
+  words <- lapply(POS_table, function(x) {
+    substring(text[[1]], x$start, x$end)
+  })
+  return(list(list(words)))
 }
-
-language <- getmode(detect_language(data[, text]))
-stopwords <- stopwords(language = language)
+data[1:nrow(data), c("filtered_pos") := filter_pos(.(pos), "NNP", .(text)), by = index]
 ```
 
 ```{r}
@@ -82,6 +110,7 @@ data[, c("token_cl") :=
 # Wordcloud
 ```{r}
 library(wordcloud2)
+library(qdap)
 frequent_terms <- freq_terms(data[, text], 100, stopwords = stopwords)
 
 set.seed(1234)
@@ -89,4 +118,32 @@ pic <- wordcloud2(
   data = frequent_terms
 )
 pic 
+```
+
+# Pointwise Mutual Information
+```{r}
+library(svs)
+library(tidytext)
+
+bigrams <- data %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2, collapse = F, drop = F) %>%
+  dplyr::select(bigram)
+bigrams[, c("index") := 1:.N, ]
+bigrams[, 
+  c("first", "second") := 
+    as.list(unlist(strsplit(.(bigram)[[1]], split = " "))), 
+  by = index
+]
+bigrams[, c("i") := 1, ]
+bigrams[, c("count_bi") := sum(i), by = bigram]
+bigrams[, c("count_fi") := sum(i), by = first]
+bigrams[, c("count_se") := sum(i), by = second]
+
+first <- unique(bigrams[, .(first, count_fi)])
+second <- unique(bigrams[, .(second, count_se)])
+bigram <- unique(bigrams[, .(bigram, count_bi)])
+
+t <- table(bigrams[,c("first", "second")])
+pmi_table <- as.matrix(pmi(t))
+top_bigrams <- apply(pmi_table, 1, function(x) {which(x == max(x))})
 ```
